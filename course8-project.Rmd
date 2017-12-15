@@ -1,0 +1,112 @@
+# Summary 
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, our goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways.
+
+The goal of this project is to predict the manner in which the exercise was done. This is the "classe" variable in the training set. 
+
+The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. 
+
+
+### Load libraries
+```{r}
+remove(list=ls())
+library(caret)
+library(randomForest)
+```
+
+### Set the working directory
+```{r}
+setwd("C:/Users/Wei/zhang/E drive/data science tool box/practical machine learning/week4project")
+```
+
+
+### Load training and testing data into R from working directory where the csv files are already downloaded.
+```{r}
+dt_train <- read.csv("./pml-training.csv",header = TRUE,sep=",",na.string = c("NA",""," ","#DIV/0!"))
+dt_test <- read.csv("./pml-testing.csv",header = TRUE,sep=",",na.string = c("NA",""," ","#DIV/0!"))
+```
+
+### quick view and cleanning of the training data set and the y variable.
+```{r}
+# str(dt_train) 
+summary(dt_train$classe) # five classes: A, B, C, D, E 
+```
+
+### to use only columns that are original movement measurments. Variables like maxium skewness of certain variables are excluded. 
+```{r}
+dt_train <- dt_train[,
+c("roll_belt",           "pitch_belt",           "yaw_belt",            "total_accel_belt"  ,  
+ "gyros_belt_x"   ,      "gyros_belt_y"     ,    "gyros_belt_z"   ,      
+ "accel_belt_x"    ,    "accel_belt_y"    ,    "accel_belt_z"    ,     
+ "magnet_belt_x"    ,    "magnet_belt_y"     ,  "magnet_belt_z"   ,     
+ 
+ "roll_arm"     ,        "pitch_arm"         ,  "yaw_arm"        ,      "total_accel_arm"   ,  
+ "gyros_arm_x"    ,     "gyros_arm_y"     ,     "gyros_arm_z"      ,    
+ "accel_arm_x"        , "accel_arm_y"    ,      "accel_arm_z"       ,   
+ "magnet_arm_x"     ,   "magnet_arm_y"    ,     "magnet_arm_z"       ,  
+
+ "roll_dumbbell"       , "pitch_dumbbell"    ,   "yaw_dumbbell"    ,     "total_accel_dumbbell",
+ "gyros_dumbbell_x" ,    "gyros_dumbbell_y"   ,  "gyros_dumbbell_z"    ,
+"accel_dumbbell_x"   ,  "accel_dumbbell_y"  ,   "accel_dumbbell_z"    ,
+ "magnet_dumbbell_x" ,   "magnet_dumbbell_y" ,   "magnet_dumbbell_z"   ,
+
+"roll_forearm"    ,     "pitch_forearm"    ,    "yaw_forearm"         ,"total_accel_forearm" , 
+"gyros_forearm_x"   ,   "gyros_forearm_y"    , "gyros_forearm_z"   ,   
+"accel_forearm_x"  ,    "accel_forearm_y"  ,   "accel_forearm_z"  ,    
+"magnet_forearm_x"  ,   "magnet_forearm_y"  ,  "magnet_forearm_z" ,    
+
+"classe")   ]
+```
+
+
+### select only relevant variables for test data set as well. 
+```{r}
+dt_test <- dt_test[,
+c("roll_belt",           "pitch_belt",           "yaw_belt",            "total_accel_belt"  ,  
+ "gyros_belt_x"   ,      "gyros_belt_y"     ,    "gyros_belt_z"   ,      
+ "accel_belt_x"    ,    "accel_belt_y"    ,    "accel_belt_z"    ,     
+ "magnet_belt_x"    ,    "magnet_belt_y"     ,  "magnet_belt_z"   ,     
+ 
+ "roll_arm"     ,        "pitch_arm"         ,  "yaw_arm"        ,      "total_accel_arm"   ,  
+ "gyros_arm_x"    ,     "gyros_arm_y"     ,     "gyros_arm_z"      ,    
+ "accel_arm_x"        , "accel_arm_y"    ,      "accel_arm_z"       ,   
+ "magnet_arm_x"     ,   "magnet_arm_y"    ,     "magnet_arm_z"       ,  
+
+ "roll_dumbbell"       , "pitch_dumbbell"    ,   "yaw_dumbbell"    ,     "total_accel_dumbbell",
+ "gyros_dumbbell_x" ,    "gyros_dumbbell_y"   ,  "gyros_dumbbell_z"    ,
+"accel_dumbbell_x"   ,  "accel_dumbbell_y"  ,   "accel_dumbbell_z"    ,
+ "magnet_dumbbell_x" ,   "magnet_dumbbell_y" ,   "magnet_dumbbell_z"   ,
+
+"roll_forearm"    ,     "pitch_forearm"    ,    "yaw_forearm"         ,"total_accel_forearm" , 
+"gyros_forearm_x"   ,   "gyros_forearm_y"    , "gyros_forearm_z"   ,   
+"accel_forearm_x"  ,    "accel_forearm_y"  ,   "accel_forearm_z"  ,    
+"magnet_forearm_x"  ,   "magnet_forearm_y"  ,  "magnet_forearm_z" ,    
+
+"problem_id")  ]
+```
+
+### Separate the original training data into training (70%) and cross validation (30%)
+```{r}
+in_train <- createDataPartition(y=dt_train$classe, p=0.7,list=FALSE)
+train <- dt_train[in_train,]
+validation <- dt_train[-in_train,]
+```
+
+### Model fit with classe as the y, all other variables being X's. 
+```{r}
+fit <- randomForest(classe ~., data=train)
+fit
+```
+The fit is pretty good. The OOB estimate of  error rate is 0.49% only. Looking at the confusion matrix also tells us the fit is good. 
+
+### cross validation
+```{r}
+pred_validation <- predict(fit,validation)
+## confusion matrix
+confusionMatrix(validation$classe,pred_validation)
+```
+Cross validation achives an Accuracy of 0.9917, which is pretty good.
+
+### prediction on the testing dataset
+```{r}
+pred_test <- predict(fit,dt_test)
+```
